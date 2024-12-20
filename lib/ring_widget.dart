@@ -10,19 +10,26 @@ class RenderRingWidget extends RenderBox {
       required this.ringPadding,
       required this.fill,
       required this.ringItemsCount,
+      required this.contentStyle,
       required this.smallCircleRadius,
-      required this.smallCircleColors});
+      required this.smallCircleColors})
+      : assert(radius > 0, "Radius must be greater than zero"),
+        assert(ringPadding >= 0, "Ring padding must not be negative."),
+        assert(
+            ringItemsCount > 0, "Ring items count must be greater than zero."),
+        assert(smallCircleRadius > 0,
+            "Small circle radius must be greater than zero."),
+        assert(content.isNotEmpty, "Content cannot be empty.");
 
   Color color;
   double radius;
-
   List<String> content;
-
   int ringItemsCount;
   bool fill;
   List<Color> smallCircleColors;
   double smallCircleRadius;
   double ringPadding;
+  TextStyle contentStyle;
 
   @override
   void performLayout() {
@@ -35,28 +42,24 @@ class RenderRingWidget extends RenderBox {
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    var numSegments = content.length;
     final Paint paint = Paint()
       ..color = color
       ..style = fill ? PaintingStyle.fill : PaintingStyle.stroke;
 
-    // Center of the circle
     final Offset center = offset + Offset(size.width / 2, size.height / 2);
     Paint centerPointPaint = Paint()..color = Colors.black;
 
     context.canvas.drawCircle(center, 20, centerPointPaint);
 
     int numRings = (content.length / ringItemsCount).ceil();
-
     int contentIndex = 0;
+
     for (int ringIndex = 0; ringIndex < numRings; ringIndex++) {
       double currentRadius =
           radius + ringIndex * (smallCircleRadius + ringPadding);
-
       context.canvas.drawCircle(center, currentRadius, paint);
 
       int itemsInRing = min(ringItemsCount, content.length - contentIndex);
-
       double baseAngle = ringIndex % 2 == 0 ? 0 : (pi / itemsInRing);
       double sweepAngle = 2 * pi / itemsInRing;
 
@@ -74,12 +77,8 @@ class RenderRingWidget extends RenderBox {
         context.canvas
             .drawCircle(Offset(x, y), smallCircleRadius, smallCirclePaint);
 
-        final TextSpan span = TextSpan(
-            text: content[contentIndex + i],
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold));
+        final TextSpan span =
+            TextSpan(text: content[contentIndex + i], style: contentStyle);
 
         final TextPainter textPainter =
             TextPainter(text: span, textDirection: TextDirection.ltr);
@@ -107,8 +106,9 @@ class RingWidget extends LeafRenderObjectWidget {
   final double smallCircleRadius;
   final double ringPadding;
   final int ringItemsCount;
+  final TextStyle contentStyle;
 
-  const RingWidget(
+  RingWidget(
       {super.key,
       required this.outerCircleColor,
       required this.radius,
@@ -117,14 +117,24 @@ class RingWidget extends LeafRenderObjectWidget {
       this.ringItemsCount = 6,
       this.fill = false,
       this.smallCircleRadius = 40,
-      this.smallCircleColors});
+      this.contentStyle = const TextStyle(
+          color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+      this.smallCircleColors})
+      : assert(radius > 0, "Radius must be greater than zero"),
+        assert(radius > 0, "Radius must be greater than zero"),
+        assert(ringPadding >= 0, "Ring padding must not be negative."),
+        assert(
+            ringItemsCount > 0, "Ring items count must be greater than zero."),
+        assert(smallCircleRadius > 0,
+            "Small circle radius must be greater than zero."),
+        assert(content.isNotEmpty, "Content cannot be empty.");
 
   @override
   RenderObject createRenderObject(BuildContext context) {
-    // TODO: implement createRenderObject
     return RenderRingWidget(
         color: outerCircleColor,
         smallCircleRadius: smallCircleRadius,
+        contentStyle: contentStyle,
         radius: radius,
         content: content,
         fill: fill,
@@ -145,6 +155,7 @@ class RingWidget extends LeafRenderObjectWidget {
     ];
     renderObject
       ..color = outerCircleColor
+      ..contentStyle = contentStyle
       ..radius = radius
       ..content = content
       ..ringPadding = ringPadding
@@ -163,30 +174,21 @@ class CustomRingWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Material(
+    return Material(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           RingWidget(
             outerCircleColor: Colors.grey,
             radius: 200,
-            ringItemsCount: 5,
-            content: [
+            contentStyle: TextStyle(
+                color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+            ringItemsCount: 6,
+            content: const [
               "SEO",
               "CMS",
               "DM",
               "DEV",
-              "UI",
-              "UX",
-              "API",
-              "DB",
-              "Cloud",
-              "AI",
-              "ML",
-              "IoT" "ML",
-              "IoT",
-              "IoT",
-              "IoT",
             ],
             ringPadding: 20,
             smallCircleRadius: 30,
