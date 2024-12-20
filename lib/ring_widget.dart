@@ -7,7 +7,9 @@ class RenderRingWidget extends RenderBox {
       {required this.color,
       required this.radius,
       required this.content,
+      required this.ringPadding,
       required this.fill,
+      required this.ringItemsCount,
       required this.smallCircleRadius,
       required this.smallCircleColors});
 
@@ -15,13 +17,20 @@ class RenderRingWidget extends RenderBox {
   double radius;
 
   List<String> content;
+
+  int ringItemsCount;
   bool fill;
   List<Color> smallCircleColors;
   double smallCircleRadius;
+  double ringPadding;
 
   @override
   void performLayout() {
-    size = Size(radius * 2, radius * 2);
+    int numRings = (content.length / 6).ceil();
+
+    double totalRadius =
+        radius + (numRings - 1) * (smallCircleRadius + ringPadding);
+    size = Size(totalRadius * 2, totalRadius * 2);
   }
 
   @override
@@ -32,54 +41,58 @@ class RenderRingWidget extends RenderBox {
       ..style = fill ? PaintingStyle.fill : PaintingStyle.stroke;
 
     // Center of the circle
-    final Offset center = offset + Offset(radius, radius);
+    final Offset center = offset + Offset(size.width / 2, size.height / 2);
+    Paint centerPointPaint = Paint()..color = Colors.black;
 
-    // Define the bounding box for the circle
-    final Rect rect = Rect.fromCircle(center: center, radius: radius);
+    context.canvas.drawCircle(center, 20, centerPointPaint);
 
-    // Draw the main ring
-    context.canvas.drawCircle(center, radius, paint);
-    // Draw the small circle
-    // List<Color> smallCircleColors = [
-    //   Colors.green,
-    //   Colors.green,
-    //   Colors.blue,
-    //   Colors.green,
-    //   Colors.blue,
-    //   Colors.yellow,
-    // ];
-    // Angle for each segment (360° / 6 = 60° or π/3 radians)
-    double sweepAngle = 2 * 3.141592653589793 / numSegments;
+    int numRings = (content.length / ringItemsCount).ceil();
 
-    // Draw small circles at each mark
-    for (int i = 0; i < numSegments; i++) {
-      // Calculate the angle for the current segment
-      final double angle = i * sweepAngle;
+    int contentIndex = 0;
+    for (int ringIndex = 0; ringIndex < numRings; ringIndex++) {
+      double currentRadius =
+          radius + ringIndex * (smallCircleRadius + ringPadding);
 
-      // Calculate the position of the small circle
-      final double x = center.dx + radius * cos(angle);
-      final double y = center.dy + radius * sin(angle);
+      context.canvas.drawCircle(center, currentRadius, paint);
 
-      final Paint smallCirclePaint = Paint()
-        ..color = smallCircleColors[i % numSegments];
-// Different color
-      context.canvas.drawCircle(Offset(x, y), smallCircleRadius,
-          smallCirclePaint); // Radius 10 for small circle
+      int itemsInRing = min(ringItemsCount, content.length - contentIndex);
 
-      final TextSpan span = TextSpan(
-          text: content[i],
-          style: TextStyle(
-              color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold));
+      double baseAngle = ringIndex % 2 == 0 ? 0 : (pi / itemsInRing);
+      double sweepAngle = 2 * pi / itemsInRing;
 
-      final TextPainter textPainter =
-          TextPainter(text: span, textDirection: TextDirection.ltr);
+      for (int i = 0; i < itemsInRing; i++) {
+        final double angle = baseAngle + i * sweepAngle;
 
-      textPainter.layout();
+        final double x = center.dx + currentRadius * cos(angle);
 
-      final Offset textOffset =
-          Offset(x - textPainter.width / 2, y - textPainter.height / 2);
+        final double y = center.dy + currentRadius * sin(angle);
 
-      textPainter.paint(context.canvas, textOffset);
+        final Paint smallCirclePaint = Paint()
+          ..color = smallCircleColors[
+              ((contentIndex + i) % smallCircleColors.length).toInt()];
+
+        context.canvas
+            .drawCircle(Offset(x, y), smallCircleRadius, smallCirclePaint);
+
+        final TextSpan span = TextSpan(
+            text: content[contentIndex + i],
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold));
+
+        final TextPainter textPainter =
+            TextPainter(text: span, textDirection: TextDirection.ltr);
+
+        textPainter.layout();
+
+        final Offset textOffset =
+            Offset(x - textPainter.width / 2, y - textPainter.height / 2);
+
+        textPainter.paint(context.canvas, textOffset);
+      }
+
+      contentIndex += itemsInRing;
     }
   }
 }
@@ -92,12 +105,16 @@ class RingWidget extends LeafRenderObjectWidget {
   final List<Color>? smallCircleColors;
   final List<String> content;
   final double smallCircleRadius;
+  final double ringPadding;
+  final int ringItemsCount;
 
   const RingWidget(
       {super.key,
       required this.outerCircleColor,
       required this.radius,
+      this.ringPadding = 10.0,
       required this.content,
+      this.ringItemsCount = 6,
       this.fill = false,
       this.smallCircleRadius = 40,
       this.smallCircleColors});
@@ -111,6 +128,8 @@ class RingWidget extends LeafRenderObjectWidget {
         radius: radius,
         content: content,
         fill: fill,
+        ringPadding: ringPadding,
+        ringItemsCount: ringItemsCount,
         // numSegments: numSegments,
         smallCircleColors: smallCircleColors ??
             List.generate(content.length, (index) => Colors.green));
@@ -128,6 +147,8 @@ class RingWidget extends LeafRenderObjectWidget {
       ..color = outerCircleColor
       ..radius = radius
       ..content = content
+      ..ringPadding = ringPadding
+      ..ringItemsCount = ringItemsCount
       ..smallCircleRadius = smallCircleRadius
       ..smallCircleColors = smallCircleColors ??
           List.generate(content.length, (index) {
@@ -147,9 +168,9 @@ class CustomRingWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           RingWidget(
-            outerCircleColor: Colors.red,
+            outerCircleColor: Colors.grey,
             radius: 200,
-            // numSegments: 6,
+            ringItemsCount: 5,
             content: [
               "SEO",
               "CMS",
@@ -162,15 +183,13 @@ class CustomRingWidget extends StatelessWidget {
               "Cloud",
               "AI",
               "ML",
-              "IoT"
+              "IoT" "ML",
+              "IoT",
+              "IoT",
+              "IoT",
             ],
-            smallCircleRadius: 40,
-            // smallCircleColors: [
-            //   Colors.blue,
-            //   Colors.green,
-            //   Colors.yellow,
-            //   Colors.orange,
-            // ],
+            ringPadding: 20,
+            smallCircleRadius: 30,
           )
         ],
       ),
